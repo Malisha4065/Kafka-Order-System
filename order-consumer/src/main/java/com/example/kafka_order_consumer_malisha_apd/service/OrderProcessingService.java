@@ -1,10 +1,12 @@
 package com.example.kafka_order_consumer_malisha_apd.service;
 
 import com.example.avro.Order;
+import com.example.kafka_order_consumer_malisha_apd.dto.OrderEventDto;
 import com.example.kafka_order_consumer_malisha_apd.exception.FatalOrderException;
 import com.example.kafka_order_consumer_malisha_apd.exception.TransientOrderException;
 import com.example.kafka_order_consumer_malisha_apd.model.RunningAverageMetrics;
 import java.security.SecureRandom;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +26,7 @@ public class OrderProcessingService {
     @Value("${order.consumer.failure.transient-probability:0.1}")
     private double transientFailureProbability;
 
-    public RunningAverageMetrics process(Order order) {
+    public OrderEventDto process(Order order) {
         double price = order.getPrice();
 
         if (price >= fatalThreshold) {
@@ -35,9 +37,18 @@ public class OrderProcessingService {
             throw new TransientOrderException("Simulated transient failure for order %s".formatted(order.getOrderId()));
         }
 
-        RunningAverageMetrics metrics = runningAverageTracker.update(price);
-        log.info("Processed order {} (product: {}) -> count={}, avg={}",
-                order.getOrderId(), order.getProduct(), metrics.count(), metrics.average());
-        return metrics;
+    RunningAverageMetrics metrics = runningAverageTracker.update(price);
+    log.info("Processed order {} (product: {}) -> count={}, avg={}",
+        order.getOrderId(), order.getProduct(), metrics.count(), metrics.average());
+    return new OrderEventDto(
+        order.getOrderId(),
+        order.getProduct(),
+        price,
+        Instant.now(),
+        metrics.count(),
+        metrics.average(),
+        "PROCESSED",
+        null
+    );
     }
 }

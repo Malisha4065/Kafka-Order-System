@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Orders Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="hero">
+    <div>
+        <h1>Kafka Orders Dashboard</h1>
+        <p>Trigger new orders on the left, watch the consumer stream react in real-time on the right.</p>
+    </div>
+    <div class="status-pill" id="connection-status">Connecting…</div>
+</header>
+
+<main class="layout">
+    <section class="pane form-pane">
+        <h2>Order Producer</h2>
+        <form id="order-form">
+            <label class="field">
+                <span>Product</span>
+                <div class="input-with-actions">
+                    <input type="text" id="product" name="product" placeholder="Gaming Laptop" required>
+                    <button type="button" class="ghost" id="btn-random-product">Shuffle</button>
+                </div>
+            </label>
+            <label class="field">
+                <span>Price (USD)</span>
+                <input type="number" id="price" name="price" min="0.01" step="0.01" placeholder="1499.00" required>
+            </label>
+            <label class="field">
+                <span>Order ID (optional)</span>
+                <input type="text" id="orderId" name="orderId" placeholder="auto-generated if empty">
+            </label>
+
+            <div class="field">
+                <span>Producer API endpoint</span>
+                <input type="url" id="producer-endpoint" required>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="primary">Publish Order</button>
+                <button type="button" id="btn-random-order">Random Order</button>
+            </div>
+        </form>
+
+        <div class="card" id="last-publish">
+            <div class="card-header">
+                <h3>Last Publish</h3>
+                <span id="last-publish-status" class="badge muted">Waiting</span>
+            </div>
+            <dl>
+                <div>
+                    <dt>Order ID</dt>
+                    <dd id="last-order-id">–</dd>
+                </div>
+                <div>
+                    <dt>Product</dt>
+                    <dd id="last-order-product">–</dd>
+                </div>
+                <div>
+                    <dt>Price</dt>
+                    <dd id="last-order-price">–</dd>
+                </div>
+                <div>
+                    <dt>Result</dt>
+                    <dd id="last-order-result">Waiting for publish…</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="pane feed-pane">
+        <h2>Consumer Feed</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-label">Running count</span>
+                <span class="stat-value" id="stat-count">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Average price</span>
+                <span class="stat-value" id="stat-average">0.00</span>
+            </div>
+        </div>
+
+        <div class="card feed-card">
+            <div class="card-header">
+                <h3>Latest events</h3>
+                <button class="ghost" id="btn-refresh">Refresh</button>
+            </div>
+            <div class="feed-table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Order</th>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                    </tr>
+                    </thead>
+                    <tbody id="feed-body">
+                    <tr>
+                        <td colspan="6" class="muted">Waiting for initial data…</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js" crossorigin="anonymous"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
