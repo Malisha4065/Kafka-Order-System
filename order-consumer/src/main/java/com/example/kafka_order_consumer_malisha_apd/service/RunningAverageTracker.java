@@ -14,6 +14,10 @@ public class RunningAverageTracker {
     public RunningAverageMetrics update(double price) {
         total.add(price);
         count.increment();
+        return getCurrentMetrics();
+    }
+
+    public RunningAverageMetrics getCurrentMetrics() {
         double totalValue = total.sum();
         long currentCount = count.sum();
         double average = currentCount == 0 ? 0 : totalValue / currentCount;
