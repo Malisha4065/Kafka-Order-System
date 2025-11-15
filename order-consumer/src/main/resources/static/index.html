@@ -86,7 +86,13 @@
 
         <div class="card feed-card">
             <div class="card-header">
-                <h3>Latest events</h3>
+                <div class="card-header-group">
+                    <h3>Latest events</h3>
+                    <div class="feed-tabs" role="tablist">
+                        <button type="button" class="feed-tab active" data-feed="processed">Processed</button>
+                        <button type="button" class="feed-tab" data-feed="dlq">DLQ</button>
+                    </div>
+                </div>
                 <button class="ghost" id="btn-refresh">Refresh</button>
             </div>
             <div class="feed-table-wrapper">

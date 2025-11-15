@@ -2,10 +2,11 @@ package com.example.kafka_order_consumer_malisha_apd.listener;
 
 import com.example.avro.Order;
 import com.example.kafka_order_consumer_malisha_apd.dto.OrderEventDto;
-import com.example.kafka_order_consumer_malisha_apd.model.RunningAverageMetrics; // Import this
+import com.example.kafka_order_consumer_malisha_apd.model.FeedCategory;
+import com.example.kafka_order_consumer_malisha_apd.model.RunningAverageMetrics;
 import com.example.kafka_order_consumer_malisha_apd.service.OrderEventPublisher;
 import com.example.kafka_order_consumer_malisha_apd.service.OrderFeedService;
-import com.example.kafka_order_consumer_malisha_apd.service.RunningAverageTracker; // Import this
+import com.example.kafka_order_consumer_malisha_apd.service.RunningAverageTracker;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,7 @@ public class DlqListener {
                 "FAILED",
                 exceptionMessage != null ? exceptionMessage : "Unknown error"
         );
-        orderFeedService.append(event);
-        eventPublisher.publish(event);
+        orderFeedService.append(FeedCategory.DLQ, event);
+        eventPublisher.publish(event, FeedCategory.DLQ);
     }
 }

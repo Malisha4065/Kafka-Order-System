@@ -2,6 +2,7 @@ package com.example.kafka_order_consumer_malisha_apd.listener;
 
 import com.example.avro.Order;
 import com.example.kafka_order_consumer_malisha_apd.dto.OrderEventDto;
+import com.example.kafka_order_consumer_malisha_apd.model.FeedCategory;
 import com.example.kafka_order_consumer_malisha_apd.service.OrderEventPublisher;
 import com.example.kafka_order_consumer_malisha_apd.service.OrderFeedService;
 import com.example.kafka_order_consumer_malisha_apd.service.OrderProcessingService;
@@ -26,10 +27,10 @@ public class OrderKafkaListener {
     public void consume(@Payload Order order,
                         @Header(KafkaHeaders.RECEIVED_KEY) String key,
                         @Header(KafkaHeaders.RECEIVED_PARTITION) int partition) {
-    OrderEventDto event = orderProcessingService.process(order);
-    log.info("Order {} consumed from partition {}. Running average: {} (count={})",
-        key, partition, event.average(), event.count());
-        orderFeedService.append(event);
-        eventPublisher.publish(event);
+        OrderEventDto event = orderProcessingService.process(order);
+        log.info("Order {} consumed from partition {}. Running average: {} (count={})",
+                key, partition, event.average(), event.count());
+        orderFeedService.append(FeedCategory.PROCESSED, event);
+        eventPublisher.publish(event, FeedCategory.PROCESSED);
     }
 }

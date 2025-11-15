@@ -11,10 +11,29 @@ const DEFAULT_PRODUCER_API = (() => {
 })();
 
 const state = {
-    events: [],
+    feeds: {
+        processed: [],
+        dlq: []
+    },
+    activeFeed: 'processed',
     stompClient: null,
     producerApi: DEFAULT_PRODUCER_API
 };
+
+const FEED_CONFIG = {
+    processed: {
+        param: 'PROCESSED',
+        topic: '/topic/orders/processed',
+        empty: 'No processed events yet.'
+    },
+    dlq: {
+        param: 'DLQ',
+        topic: '/topic/orders/dlq',
+        empty: 'No DLQ events yet.'
+    }
+};
+
+const FEED_KEYS = Object.keys(FEED_CONFIG);
 
 let toastTimer;
 
@@ -36,7 +55,8 @@ const elements = {
     connectionStatus: document.getElementById('connection-status'),
     btnRandomProduct: document.getElementById('btn-random-product'),
     btnRandomOrder: document.getElementById('btn-random-order'),
-    btnRefresh: document.getElementById('btn-refresh')
+    btnRefresh: document.getElementById('btn-refresh'),
+    feedTabs: document.querySelectorAll('.feed-tab')
 };
 
 elements.producerEndpoint.value = state.producerApi;
@@ -73,19 +93,21 @@ function setConnectionStatus(text, tone = 'info') {
 }
 
 function renderStats() {
-    const latest = state.events[0];
+    const activeFeed = state.feeds[state.activeFeed] ?? [];
+    const latest = activeFeed[0];
     elements.statCount.textContent = latest?.count ?? 0;
     elements.statAverage.textContent = latest?.average?.toFixed(2) ?? '0.00';
 }
 
 function renderFeed() {
-    if (!state.events.length) {
-        elements.feedBody.innerHTML = '<tr><td colspan="6" class="muted">No events received yet.</td></tr>';
+    const activeFeed = state.feeds[state.activeFeed] ?? [];
+    if (!activeFeed.length) {
+        elements.feedBody.innerHTML = `<tr><td colspan="6" class="muted">${FEED_CONFIG[state.activeFeed].empty}</td></tr>`;
         renderStats();
         return;
     }
 
-    const rows = state.events.map(event => `
+    const rows = activeFeed.map(event => `
         <tr>
             <td>${formatTimestamp(event.timestamp)}</td>
             <td>${event.orderId}</td>
@@ -100,9 +122,14 @@ function renderFeed() {
     renderStats();
 }
 
-function upsertEvent(event) {
-    state.events = [event, ...state.events].slice(0, 100);
-    renderFeed();
+function upsertEvent(categoryKey, event) {
+    const existing = state.feeds[categoryKey] ?? [];
+    state.feeds[categoryKey] = [event, ...existing].slice(0, 100);
+    if (state.activeFeed === categoryKey) {
+        renderFeed();
+    } else {
+        renderStats();
+    }
 }
 
 function formatTimestamp(value) {
@@ -113,22 +140,42 @@ function formatTimestamp(value) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-async function loadInitialFeed() {
+async function loadFeed(categoryKey, { silent = false } = {}) {
+    const config = FEED_CONFIG[categoryKey];
+    if (!config) {
+        return;
+    }
     try {
-        const response = await fetch('/api/feed');
+        const response = await fetch(`/api/feed?category=${config.param}`);
         if (!response.ok) {
             throw new Error(`Feed request failed with ${response.status}`);
         }
         const data = await response.json();
-        state.events = data;
-        renderFeed();
-        if (data.length) {
-            showToast('info', `Loaded ${data.length} historical events.`);
+        state.feeds[categoryKey] = data;
+        if (state.activeFeed === categoryKey) {
+            renderFeed();
+        } else {
+            renderStats();
+        }
+        if (!silent && data.length) {
+            showToast('info', `Loaded ${data.length} ${categoryKey === 'processed' ? 'processed' : 'DLQ'} events.`);
         }
     } catch (error) {
-        console.error('Feed error', error);
-        showToast('error', 'Unable to load historical feed.');
+        console.error(`Feed error (${categoryKey})`, error);
+        if (!silent) {
+            showToast('error', `Unable to load ${categoryKey.toUpperCase()} feed.`);
+        }
     }
+}
+
+function refreshFeeds() {
+    return Promise.all(
+        FEED_KEYS.map(key => loadFeed(key, { silent: key !== state.activeFeed }))
+    );
+}
+
+function loadInitialFeeds() {
+    return refreshFeeds();
 }
 
 function connectWebSocket() {
@@ -147,13 +194,15 @@ function connectWebSocket() {
         reconnectDelay: 5000,
         onConnect: () => {
             setConnectionStatus('Live', 'success');
-            state.stompClient.subscribe('/topic/orders', message => {
-                try {
-                    const payload = JSON.parse(message.body);
-                    upsertEvent(payload);
-                } catch (error) {
-                    console.error('Message parse error', error);
-                }
+            FEED_KEYS.forEach(key => {
+                state.stompClient.subscribe(FEED_CONFIG[key].topic, message => {
+                    try {
+                        const payload = JSON.parse(message.body);
+                        upsertEvent(key, payload);
+                    } catch (error) {
+                        console.error(`Message parse error (${key})`, error);
+                    }
+                });
             });
         },
         onStompError: frame => {
@@ -252,7 +301,7 @@ elements.btnRandomOrder.addEventListener('click', () => {
     elements.price.value = randomPrice();
 });
 
-elements.btnRefresh.addEventListener('click', loadInitialFeed);
+elements.btnRefresh.addEventListener('click', refreshFeeds);
 
 elements.producerEndpoint.addEventListener('change', event => {
     state.producerApi = event.target.value.trim();
@@ -260,9 +309,28 @@ elements.producerEndpoint.addEventListener('change', event => {
     showToast('info', 'Updated producer endpoint.');
 });
 
+if (elements.feedTabs && elements.feedTabs.length) {
+    elements.feedTabs.forEach(tab => {
+        tab.addEventListener('click', () => setActiveFeed(tab.dataset.feed));
+    });
+}
+
+function setActiveFeed(feedKey) {
+    if (!FEED_CONFIG[feedKey] || state.activeFeed === feedKey) {
+        return;
+    }
+    state.activeFeed = feedKey;
+    if (elements.feedTabs && elements.feedTabs.length) {
+        elements.feedTabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.feed === feedKey);
+        });
+    }
+    renderFeed();
+}
+
 // Bootstrap
 setConnectionStatus('Connecting…');
-loadInitialFeed();
+loadInitialFeeds();
 connectWebSocket();
 
 if (!elements.product.value) {
