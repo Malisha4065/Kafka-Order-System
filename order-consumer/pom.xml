@@ -9,10 +9,10 @@
         <relativePath/>
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>kafka-order-system-malisha-apd</artifactId>
+    <artifactId>kafka-order-consumer-malisha-apd</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>kafka-order-system-malisha-apd</name>
-    <description>Order system implemented using Kafka</description>
+    <name>kafka-order-consumer-malisha-apd</name>
+    <description>Order system (consumer) implemented using Kafka</description>
     <url/>
     <licenses>
         <license/>
