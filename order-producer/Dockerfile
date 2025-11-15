@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jdk-jammy AS builder
 WORKDIR /app
 
 # Copy the shared Avro schema
-COPY src/main/avro /app/src/main/avro
+COPY src/main/avro /src/main/avro
 
 # Copy the producer's pom.xml and maven wrapper
 COPY order-producer/mvnw /app/mvnw
