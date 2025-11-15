@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  order-consumer:
+    build:
+      context: .
+      dockerfile: ./order-consumer/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  order-producer:
+    build:
+      context: .
+      dockerfile: ./order-producer/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - order-consumer
