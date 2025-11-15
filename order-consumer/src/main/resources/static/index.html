@@ -75,11 +75,11 @@
         <h2>Consumer Feed</h2>
         <div class="stats">
             <div class="stat-card">
-                <span class="stat-label">Running count</span>
+                <span class="stat-label">Processed running count</span>
                 <span class="stat-value" id="stat-count">0</span>
             </div>
             <div class="stat-card">
-                <span class="stat-label">Average price</span>
+                <span class="stat-label">Processed average price</span>
                 <span class="stat-value" id="stat-average">0.00</span>
             </div>
         </div>
@@ -89,7 +89,8 @@
                 <div class="card-header-group">
                     <h3>Latest events</h3>
                     <div class="feed-tabs" role="tablist">
-                        <button type="button" class="feed-tab active" data-feed="processed">Processed</button>
+                        <button type="button" class="feed-tab active" data-feed="all">All</button>
+                        <button type="button" class="feed-tab" data-feed="processed">Processed</button>
                         <button type="button" class="feed-tab" data-feed="dlq">DLQ</button>
                     </div>
                 </div>

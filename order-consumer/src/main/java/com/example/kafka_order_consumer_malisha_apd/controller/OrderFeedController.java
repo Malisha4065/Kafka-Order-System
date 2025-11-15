@@ -18,7 +18,7 @@ public class OrderFeedController {
     private final OrderFeedService orderFeedService;
 
     @GetMapping
-    public List<OrderEventDto> latest(@RequestParam(name = "category", defaultValue = "PROCESSED") FeedCategory category) {
+    public List<OrderEventDto> latest(@RequestParam(name = "category", defaultValue = "ALL") FeedCategory category) {
         return orderFeedService.latest(category);
     }
 }

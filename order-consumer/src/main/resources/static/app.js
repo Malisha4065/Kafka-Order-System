@@ -13,23 +13,32 @@ const DEFAULT_PRODUCER_API = (() => {
 const state = {
     feeds: {
         processed: [],
-        dlq: []
+        dlq: [],
+        all: []
     },
-    activeFeed: 'processed',
+    activeFeed: 'all',
     stompClient: null,
     producerApi: DEFAULT_PRODUCER_API
 };
 
 const FEED_CONFIG = {
+    all: {
+        param: 'ALL',
+        topic: null,
+        empty: 'No events received yet.',
+        label: 'all events'
+    },
     processed: {
         param: 'PROCESSED',
         topic: '/topic/orders/processed',
-        empty: 'No processed events yet.'
+        empty: 'No processed events yet.',
+        label: 'processed events'
     },
     dlq: {
         param: 'DLQ',
         topic: '/topic/orders/dlq',
-        empty: 'No DLQ events yet.'
+        empty: 'No DLQ events yet.',
+        label: 'DLQ events'
     }
 };
 
@@ -93,21 +102,22 @@ function setConnectionStatus(text, tone = 'info') {
 }
 
 function renderStats() {
-    const activeFeed = state.feeds[state.activeFeed] ?? [];
-    const latest = activeFeed[0];
+    const processedFeed = state.feeds.processed ?? [];
+    const latest = processedFeed[0];
     elements.statCount.textContent = latest?.count ?? 0;
     elements.statAverage.textContent = latest?.average?.toFixed(2) ?? '0.00';
 }
 
 function renderFeed() {
-    const activeFeed = state.feeds[state.activeFeed] ?? [];
-    if (!activeFeed.length) {
-        elements.feedBody.innerHTML = `<tr><td colspan="6" class="muted">${FEED_CONFIG[state.activeFeed].empty}</td></tr>`;
+    const dataset = state.feeds[state.activeFeed] ?? [];
+    const config = FEED_CONFIG[state.activeFeed] ?? {};
+    if (!dataset.length) {
+        elements.feedBody.innerHTML = `<tr><td colspan="6" class="muted">${config.empty || 'No events yet.'}</td></tr>`;
         renderStats();
         return;
     }
 
-    const rows = activeFeed.map(event => `
+    const rows = dataset.map(event => `
         <tr>
             <td>${formatTimestamp(event.timestamp)}</td>
             <td>${event.orderId}</td>
@@ -130,6 +140,30 @@ function upsertEvent(categoryKey, event) {
     } else {
         renderStats();
     }
+    rebuildAllFeed({
+        render: state.activeFeed === 'all'
+    });
+}
+
+function rebuildAllFeed({ render = false } = {}) {
+    const processedFeed = state.feeds.processed ?? [];
+    const dlqFeed = state.feeds.dlq ?? [];
+    state.feeds.all = [...processedFeed, ...dlqFeed]
+        .sort((a, b) => eventTimestamp(b) - eventTimestamp(a))
+        .slice(0, 100);
+    if (render) {
+        renderFeed();
+    } else {
+        renderStats();
+    }
+}
+
+function eventTimestamp(event) {
+    if (!event?.timestamp) {
+        return 0;
+    }
+    const value = new Date(event.timestamp).getTime();
+    return Number.isNaN(value) ? 0 : value;
 }
 
 function formatTimestamp(value) {
@@ -152,13 +186,22 @@ async function loadFeed(categoryKey, { silent = false } = {}) {
         }
         const data = await response.json();
         state.feeds[categoryKey] = data;
-        if (state.activeFeed === categoryKey) {
-            renderFeed();
+        if (categoryKey === 'all') {
+            if (state.activeFeed === 'all') {
+                renderFeed();
+            } else {
+                renderStats();
+            }
         } else {
-            renderStats();
+            if (state.activeFeed === categoryKey) {
+                renderFeed();
+            } else {
+                renderStats();
+            }
+            rebuildAllFeed({ render: state.activeFeed === 'all' });
         }
         if (!silent && data.length) {
-            showToast('info', `Loaded ${data.length} ${categoryKey === 'processed' ? 'processed' : 'DLQ'} events.`);
+            showToast('info', `Loaded ${data.length} ${config.label}.`);
         }
     } catch (error) {
         console.error(`Feed error (${categoryKey})`, error);
@@ -195,7 +238,11 @@ function connectWebSocket() {
         onConnect: () => {
             setConnectionStatus('Live', 'success');
             FEED_KEYS.forEach(key => {
-                state.stompClient.subscribe(FEED_CONFIG[key].topic, message => {
+                const topic = FEED_CONFIG[key].topic;
+                if (!topic) {
+                    return;
+                }
+                state.stompClient.subscribe(topic, message => {
                     try {
                         const payload = JSON.parse(message.body);
                         upsertEvent(key, payload);
@@ -311,6 +358,7 @@ elements.producerEndpoint.addEventListener('change', event => {
 
 if (elements.feedTabs && elements.feedTabs.length) {
     elements.feedTabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.feed === state.activeFeed);
         tab.addEventListener('click', () => setActiveFeed(tab.dataset.feed));
     });
 }
