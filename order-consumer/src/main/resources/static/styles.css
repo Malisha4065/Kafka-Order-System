@@ -137,6 +137,25 @@ button:hover {
     background: rgba(148,163,184,0.25);
 }
 
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+button.is-loading {
+    position: relative;
+}
+
+button.is-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(15,23,42,0.35);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
 button.primary {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: #08111e;
@@ -296,6 +315,12 @@ tr:last-child td {
 .toast.info { border-color: var(--primary); }
 .toast.error { border-color: var(--danger); }
 .toast.success { border-color: var(--success); }
+
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 0.85; }
+    100% { opacity: 0.4; }
+}
 
 @media (max-width: 720px) {
     body {

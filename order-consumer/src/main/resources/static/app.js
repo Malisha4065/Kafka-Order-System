@@ -21,7 +21,7 @@ let toastTimer;
 const elements = {
     product: document.getElementById('product'),
     price: document.getElementById('price'),
-    orderId: document.getElementById('orderId'),
+    publishButton: document.getElementById('btn-publish'),
     producerEndpoint: document.getElementById('producer-endpoint'),
     form: document.getElementById('order-form'),
     lastOrderId: document.getElementById('last-order-id'),
@@ -40,6 +40,9 @@ const elements = {
 };
 
 elements.producerEndpoint.value = state.producerApi;
+if (elements.publishButton) {
+    elements.publishButton.dataset.defaultLabel = elements.publishButton.textContent.trim();
+}
 
 const PRODUCT_PRESETS = [
     'Gaming Laptop',
@@ -89,7 +92,7 @@ function renderFeed() {
             <td>${event.product}</td>
             <td>$${Number(event.price).toFixed(2)}</td>
             <td><span class="status-pill-small ${event.status === 'PROCESSED' ? 'ok' : 'fail'}">${event.status}</span></td>
-            <td>${event.message ?? ''}</td>
+            <td>${simplifyErrorMessage(event.message)}</td>
         </tr>
     `).join('');
 
@@ -184,6 +187,7 @@ function setLastPublish(response, statusClass = 'success', label = 'Published') 
 }
 
 async function publishOrder(payload) {
+    setPublishBusy(true);
     try {
         const response = await fetch(state.producerApi, {
             method: 'POST',
@@ -199,9 +203,33 @@ async function publishOrder(payload) {
     } catch (error) {
         console.error('Publish failed', error);
         setLastPublish(null, 'error', 'Failed');
-        elements.lastResult.textContent = error.message;
-        showToast('error', error.message);
+        const friendlyMessage = simplifyErrorMessage(error.message);
+        elements.lastResult.textContent = friendlyMessage;
+        showToast('error', friendlyMessage);
+    } finally {
+        setPublishBusy(false);
     }
+}
+
+function simplifyErrorMessage(message) {
+    if (!message) {
+        return '';
+    }
+    const text = String(message);
+    const delimiterIndex = text.lastIndexOf(';');
+    const trimmed = delimiterIndex >= 0 ? text.slice(delimiterIndex + 1) : text;
+    return trimmed.trim();
+}
+
+function setPublishBusy(isBusy) {
+    if (!elements.publishButton) {
+        return;
+    }
+    const button = elements.publishButton;
+    const label = button.dataset.defaultLabel || 'Publish Order';
+    button.disabled = isBusy;
+    button.classList.toggle('is-loading', isBusy);
+    button.textContent = isBusy ? 'Publishing…' : label;
 }
 
 // Event listeners
@@ -210,8 +238,7 @@ elements.form.addEventListener('submit', event => {
     event.preventDefault();
     const payload = {
         product: elements.product.value.trim(),
-        price: Number(elements.price.value),
-        orderId: elements.orderId.value.trim() || null
+        price: Number(elements.price.value)
     };
     publishOrder(payload);
 });
@@ -223,7 +250,6 @@ elements.btnRandomProduct.addEventListener('click', () => {
 elements.btnRandomOrder.addEventListener('click', () => {
     elements.product.value = randomProduct();
     elements.price.value = randomPrice();
-    elements.orderId.value = '';
 });
 
 elements.btnRefresh.addEventListener('click', loadInitialFeed);
