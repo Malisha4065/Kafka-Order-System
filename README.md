@@ -1,5 +1,7 @@
 # Kafka Order System
 
+Watch the Demo on YouTube: [https://www.youtube.com/watch?v=hWCzUIaAj9s](https://www.youtube.com/watch?v=hWCzUIaAj9s)
+
 Two Spring Boot microservices showcase an end-to-end Kafka solution using Avro serialization, real-time aggregation, retries, and a dead-letter queue (DLQ). The producer exposes an HTTP API (and optional auto-generator) that emits order events to Confluent Cloud (or local Kafka). The consumer processes the events, maintains a running average of order prices, retries temporary failures with exponential backoff, and forwards permanent failures to a DLQ.
 
 ## Architecture
