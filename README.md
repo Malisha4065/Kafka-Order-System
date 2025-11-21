@@ -77,6 +77,3 @@ Watch the consumer logs to see the running average and retry/DLQ behavior. Enabl
 - The producer’s REST endpoint returns an order id and status when publishing succeeds; `RestExceptionHandler` surfaces errors if Kafka is unreachable.
 - `RandomOrderGenerator` plus the consumer running average provide a live demo without extra tooling.
 
-## Next Steps
-
-- Swap random failure simulation with real validation/business rules.
